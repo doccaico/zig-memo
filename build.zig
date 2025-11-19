@@ -4,7 +4,7 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const langref_file = generateLangRef(b);
-    const install_langref = b.addInstallFileWithDir(langref_file, .{ .custom = "../public" }, "index.html");
+    const install_langref = b.addInstallFileWithDir(langref_file, .{ .custom = ".." }, "index.html");
     b.default_step.dependOn(&install_langref.step);
 }
 
