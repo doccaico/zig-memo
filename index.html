@@ -317,6 +317,7 @@
         <li><a id="toc-ArrayList" href="#ArrayList">ArrayList</a></li>
         <li><a id="toc-HashMap" href="#HashMap">HashMap</a></li>
         <li><a id="toc-Json" href="#Json">Json</a></li>
+        <li><a id="toc-Http" href="#Http">Http</a></li>
     </ul>
 
         </nav>
@@ -615,6 +616,65 @@ All 1 tests passed.
 2/3 json.test.parsing a struct...OK
 3/3 json.test.stringifying a struct...OK
 All 3 tests passed.
+</samp></pre></figure>
+
+        
+
+
+        <h2 id="Http"><a href="#toc-Http">Http</a> <a class="hdr" href="#Http">§</a></h2>
+
+
+        <p><code>request</code>(GET)の使い方(head)。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">http_request_get_head.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">test</span> <span class="tok-str">&quot;Status == 200&quot;</span> {
+    <span class="tok-kw">const</span> uri = std.Uri.parse(<span class="tok-str">&quot;https://example.com&quot;</span>) <span class="tok-kw">catch</span> <span class="tok-kw">return</span> <span class="tok-kw">error</span>.UriParsingError;
+    <span class="tok-kw">var</span> client = std.http.Client{
+        .allocator = std.testing.allocator,
+    };
+    <span class="tok-kw">defer</span> client.deinit();
+
+    <span class="tok-kw">var</span> req = <span class="tok-kw">try</span> client.request(.GET, uri, .{});
+    <span class="tok-kw">defer</span> req.deinit();
+
+    <span class="tok-kw">try</span> req.sendBodiless();
+    <span class="tok-kw">const</span> response = <span class="tok-kw">try</span> req.receiveHead(&amp;.{});
+
+    <span class="tok-kw">try</span> std.testing.expectEqual(response.head.status, .ok);
+    <span class="tok-kw">try</span> std.testing.expectEqual(response.head.version, .@&quot;HTTP/1.1&quot;);
+    <span class="tok-kw">try</span> std.testing.expectEqualSlices(<span class="tok-type">u8</span>, response.head.content_type.?, <span class="tok-str">&quot;text/html&quot;</span>);
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test http_request_get_head.zig</kbd>
+1/1 http_request_get_head.test.Status == 200...OK
+All 1 tests passed.
+</samp></pre></figure>
+
+        <p><code>request</code>(GET)の使い方(body)。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">http_request_get_body.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() !<span class="tok-type">void</span> {
+    <span class="tok-kw">var</span> debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+    <span class="tok-kw">const</span> gpa = debug_allocator.allocator();
+    <span class="tok-kw">defer</span> std.debug.assert(debug_allocator.deinit() == .ok);
+
+    <span class="tok-kw">const</span> url: []<span class="tok-kw">const</span> <span class="tok-type">u8</span> = <span class="tok-str">&quot;https://example.com&quot;</span>;
+
+    <span class="tok-kw">var</span> client = std.http.Client{ .allocator = gpa };
+    <span class="tok-kw">defer</span> client.deinit();
+
+    <span class="tok-kw">var</span> body: std.Io.Writer.Allocating = .init(gpa);
+    <span class="tok-kw">defer</span> body.deinit();
+
+    <span class="tok-kw">const</span> fetch_res = <span class="tok-kw">try</span> client.fetch(.{
+        .location = .{ .url = url },
+        .method = .GET,
+        .response_writer = &amp;body.writer,
+    });
+    std.debug.assert(fetch_res.status == .ok);
+
+    std.debug.print(<span class="tok-str">&quot;{s}&quot;</span>, .{body.written()});
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig build-exe http_request_get_body.zig</kbd>
+$ <kbd>./http_request_get_body</kbd>
+&lt;!doctype html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;title&gt;Example Domain&lt;/title&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;&lt;style&gt;body{background:#eee;width:60vw;margin:15vh auto;font-family:system-ui,sans-serif}h1{font-size:1.5em}div{opacity:0.8}a:link,a:visited{color:#348}&lt;/style&gt;&lt;body&gt;&lt;div&gt;&lt;h1&gt;Example Domain&lt;/h1&gt;&lt;p&gt;This domain is for use in documentation examples without needing permission. Avoid use in operations.&lt;p&gt;&lt;a href=&quot;https://iana.org/domains/example&quot;&gt;Learn more&lt;/a&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;
 </samp></pre></figure>
 
         

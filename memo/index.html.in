@@ -366,6 +366,17 @@
         {#code|json.zig#}
 
         {#header_close#}
+
+
+        {#header_open|Http#}
+
+        <p>{#syntax#}request{#endsyntax#}(GET)の使い方(head)。</p>
+        {#code|http_request_get_head.zig#}
+
+        <p>{#syntax#}request{#endsyntax#}(GET)の使い方(body)。</p>
+        {#code|http_request_get_body.zig#}
+
+        {#header_close#}
       </div>
     </div>
   </body>
