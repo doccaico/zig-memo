@@ -42,7 +42,7 @@ test "stringifying a struct" {
     // zig fmt: on
 
     var buffer: [1024]u8 = undefined;
-    var w: std.io.Writer = .fixed(&buffer);
+    var w: std.Io.Writer = .fixed(&buffer);
     var s: std.json.Stringify = .{
         .writer = &w,
         .options = .{ .whitespace = .indent_4 },

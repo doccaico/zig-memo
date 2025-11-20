@@ -592,7 +592,7 @@ All 1 tests passed.
     <span class="tok-comment">// zig fmt: on</span>
 
     <span class="tok-kw">var</span> buffer: [<span class="tok-number">1024</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;
-    <span class="tok-kw">var</span> w: std.io.Writer = .fixed(&amp;buffer);
+    <span class="tok-kw">var</span> w: std.Io.Writer = .fixed(&amp;buffer);
     <span class="tok-kw">var</span> s: std.json.Stringify = .{
         .writer = &amp;w,
         .options = .{ .whitespace = .indent_4 },
