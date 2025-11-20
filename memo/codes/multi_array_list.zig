@@ -12,9 +12,9 @@ test "MultiArrayList Usage" {
     var list = std.MultiArrayList(Foo){};
     defer list.deinit(allocator);
 
-    try std.testing.expectEqual(list.items(.a).len, @as(usize, 0));
-    try std.testing.expectEqual(list.items(.b).len, @as(usize, 0));
-    try std.testing.expectEqual(list.items(.c).len, @as(usize, 0));
+    try std.testing.expectEqual(list.items(.a).len, 0);
+    try std.testing.expectEqual(list.items(.b).len, 0);
+    try std.testing.expectEqual(list.items(.c).len, 0);
 
     try list.append(allocator, .{
         .a = 1,

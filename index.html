@@ -428,9 +428,9 @@ All 1 tests passed.
     <span class="tok-kw">var</span> list = std.MultiArrayList(Foo){};
     <span class="tok-kw">defer</span> list.deinit(allocator);
 
-    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.a).len, <span class="tok-builtin">@as</span>(<span class="tok-type">usize</span>, <span class="tok-number">0</span>));
-    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.b).len, <span class="tok-builtin">@as</span>(<span class="tok-type">usize</span>, <span class="tok-number">0</span>));
-    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.c).len, <span class="tok-builtin">@as</span>(<span class="tok-type">usize</span>, <span class="tok-number">0</span>));
+    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.a).len, <span class="tok-number">0</span>);
+    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.b).len, <span class="tok-number">0</span>);
+    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.c).len, <span class="tok-number">0</span>);
 
     <span class="tok-kw">try</span> list.append(allocator, .{
         .a = <span class="tok-number">1</span>,
