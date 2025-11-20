@@ -312,19 +312,48 @@
       </div>
 
       <div id="contents-wrapper">
-        {#header_open|Root#}
-        <p>説明-0.</p>
-        {#code|root.zig#}
+        {#header_open|Allocator#}
+
+        <p>DebugとReleaseSafeモードの時は{#syntax#}DebugAllocator{#endsyntax#}を使用して、ReleaseFastとReleaseSmallの時は{#syntax#}smp_allocator{#endsyntax#}を使用する方法。</p>
+        {#code|debug_and_smp_allocator.zig#}
+
+        <p>{#syntax#}c_allocator{#endsyntax#}と{#syntax#}ArenaAllocator{#endsyntax#}の使い方。(例: zig run FILE.zig -lc)</p>
+        {#code|c_and_arena_allocator.zig#}
+
+        <p>{#syntax#}page_allocator{#endsyntax#}の使い方。</p>
+        {#code|page_allocator.zig#}
+
+        <p>{#syntax#}fixed_buffer_allocator{#endsyntax#}の使い方。</p>
+        {#code|fixed_buffer_allocator.zig#}
+
         {#header_close#}
 
-        {#header_open|Hello World1#}
-        <p>説明-1.</p>
-        {#code|hello.zig#}
+
+        {#header_open|ArrayList#}
+
+        <p>{#syntax#}ArrayList{#endsyntax#}の使い方。</p>
+        {#code|array_list.zig#}
+
+        <p>{#syntax#}MultiArrayList{#endsyntax#}の使い方。</p>
+        {#code|multi_array_list.zig#}
+
         {#header_close#}
 
-        {#header_open|Hello World2#}
-        <p>説明-2.</p>
-        {#code|hello.zig#}
+
+        {#header_open|HashMap#}
+
+        <p>{#syntax#}AutoHashMap{#endsyntax#}の使い方。</p>
+        {#code|auto_hash_map.zig#}
+
+        <p>{#syntax#}StringHashMap{#endsyntax#}の使い方。</p>
+        {#code|string_hash_map.zig#}
+
+        <p>{#syntax#}AutoArrayHashMap{#endsyntax#}の使い方。</p>
+        {#code|auto_array_hash_map.zig#}
+
+        <p>{#syntax#}StringArrayHashMap{#endsyntax#}の使い方。</p>
+        {#code|string_array_hash_map.zig#}
+
         {#header_close#}
       </div>
     </div>

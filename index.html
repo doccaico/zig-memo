@@ -310,64 +310,233 @@
           
 
     <ul>
-        <li><a id="toc-Root" href="#Root">Root</a></li>
-        <li><a id="toc-Hello-World1" href="#Hello-World1">Hello World1</a></li>
-        <li><a id="toc-Hello-World2" href="#Hello-World2">Hello World2</a></li>
+        <li><a id="toc-Allocator" href="#Allocator">Allocator</a></li>
+        <li><a id="toc-ArrayList" href="#ArrayList">ArrayList</a></li>
+        <li><a id="toc-HashMap" href="#HashMap">HashMap</a></li>
     </ul>
 
         </nav>
       </div>
 
       <div id="contents-wrapper">
-        <h2 id="Root"><a href="#toc-Root">Root</a> <a class="hdr" href="#Root">§</a></h2>
+        <h2 id="Allocator"><a href="#toc-Allocator">Allocator</a> <a class="hdr" href="#Allocator">§</a></h2>
 
-        <p>説明-0.</p>
-        <figure><figcaption class="zig-cap"><cite class="file">root.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
 
-<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">add</span>(a: <span class="tok-type">i32</span>, b: <span class="tok-type">i32</span>) <span class="tok-type">i32</span> {
-    <span class="tok-kw">return</span> a + b;
-}
+        <p>DebugとReleaseSafeモードの時は<code>DebugAllocator</code>を使用して、ReleaseFastとReleaseSmallの時は<code>smp_allocator</code>を使用する方法。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">debug_and_smp_allocator.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> builtin = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;builtin&quot;</span>);
+<span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
 
-<span class="tok-kw">test</span> <span class="tok-str">&quot;basic add functionality&quot;</span> {
-    <span class="tok-kw">try</span> std.testing.expect(add(<span class="tok-number">3</span>, <span class="tok-number">7</span>) == <span class="tok-number">10</span>);
-}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test root.zig</kbd>
-1/1 root.test.basic add functionality...OK
-All 1 tests passed.
+<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() !<span class="tok-type">void</span> {
+    <span class="tok-kw">var</span> debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+
+    <span class="tok-kw">const</span> gpa, <span class="tok-kw">const</span> is_debug = gpa: {
+        <span class="tok-kw">break</span> :gpa <span class="tok-kw">switch</span> (builtin.mode) {
+            .Debug, .ReleaseSafe =&gt; .{ debug_allocator.allocator(), <span class="tok-null">true</span> },
+            .ReleaseFast, .ReleaseSmall =&gt; .{ std.heap.smp_allocator, <span class="tok-null">false</span> },
+        };
+    };
+    <span class="tok-kw">defer</span> <span class="tok-kw">if</span> (is_debug) {
+        std.debug.assert(debug_allocator.deinit() == .ok);
+    };
+
+    _ = gpa;
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig build-exe debug_and_smp_allocator.zig</kbd>
+$ <kbd>./debug_and_smp_allocator</kbd>
 </samp></pre></figure>
+
+        <p><code>c_allocator</code>と<code>ArenaAllocator</code>の使い方。(例: zig run FILE.zig -lc)</p>
+        <figure><figcaption class="zig-cap"><cite class="file">c_and_arena_allocator.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() !<span class="tok-type">void</span> {
+    <span class="tok-kw">var</span> arena = std.heap.ArenaAllocator.init(std.heap.c_allocator);
+    <span class="tok-kw">defer</span> arena.deinit();
+    <span class="tok-kw">const</span> allocator = arena.allocator();
+
+    <span class="tok-kw">const</span> ptr = <span class="tok-kw">try</span> allocator.create(<span class="tok-type">i32</span>);
+    <span class="tok-comment">// defer allocator.destroy(ptr);</span>
+    <span class="tok-comment">// 本来ならdestroyしないといけないけど、ArenaAllocatorなので必要ない。</span>
+    ptr.* = <span class="tok-number">7</span>;
+
+    std.debug.assert(ptr.* == <span class="tok-number">7</span>);
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig build-exe c_and_arena_allocator.zig -lc</kbd>
+$ <kbd>./c_and_arena_allocator</kbd>
+</samp></pre></figure>
+
+        <p><code>page_allocator</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">page_allocator.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() !<span class="tok-type">void</span> {
+    <span class="tok-kw">var</span> arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    <span class="tok-kw">defer</span> arena.deinit();
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig build-exe page_allocator.zig</kbd>
+$ <kbd>./page_allocator</kbd>
+</samp></pre></figure>
+
+        <p><code>fixed_buffer_allocator</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">fixed_buffer_allocator.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">main</span>() !<span class="tok-type">void</span> {
+    <span class="tok-kw">var</span> buffer: [<span class="tok-number">5</span>]<span class="tok-type">u8</span> = <span class="tok-null">undefined</span>;
+    <span class="tok-kw">var</span> fba = std.heap.FixedBufferAllocator.init(&amp;buffer);
+    <span class="tok-kw">const</span> allocator = fba.allocator();
+
+    _ = <span class="tok-kw">try</span> allocator.alloc(<span class="tok-type">u8</span>, <span class="tok-number">3</span>);
+    _ = <span class="tok-kw">try</span> allocator.alloc(<span class="tok-type">u8</span>, <span class="tok-number">2</span>);
+
+    <span class="tok-kw">try</span> std.testing.expectError(<span class="tok-kw">error</span>.OutOfMemory, allocator.alloc(<span class="tok-type">u8</span>, <span class="tok-number">1</span>));
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig build-exe fixed_buffer_allocator.zig</kbd>
+$ <kbd>./fixed_buffer_allocator</kbd>
+</samp></pre></figure>
+
         
 
-        <h2 id="Hello-World1"><a href="#toc-Hello-World1">Hello World1</a> <a class="hdr" href="#Hello-World1">§</a></h2>
 
-        <p>説明-1.</p>
-        <figure><figcaption class="zig-cap"><cite class="file">hello.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+        <h2 id="ArrayList"><a href="#toc-ArrayList">ArrayList</a> <a class="hdr" href="#ArrayList">§</a></h2>
 
-<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">add</span>(a: <span class="tok-type">i32</span>, b: <span class="tok-type">i32</span>) <span class="tok-type">i32</span> {
-    <span class="tok-kw">return</span> a + b;
-}
 
-<span class="tok-kw">test</span> <span class="tok-str">&quot;basic add functionality&quot;</span> {
-    <span class="tok-kw">try</span> std.testing.expect(add(<span class="tok-number">3</span>, <span class="tok-number">7</span>) == <span class="tok-number">10</span>);
-}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test hello.zig</kbd>
-1/1 hello.test.basic add functionality...OK
+        <p><code>ArrayList</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">array_list.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">test</span> <span class="tok-str">&quot;ArrayList Usage&quot;</span> {
+    <span class="tok-kw">const</span> allocator = std.testing.allocator;
+
+    <span class="tok-kw">var</span> list = std.ArrayList(<span class="tok-type">u8</span>).empty;
+    <span class="tok-kw">defer</span> list.deinit(allocator);
+
+    <span class="tok-kw">try</span> list.append(allocator, <span class="tok-str">'a'</span>);
+    <span class="tok-kw">try</span> list.append(allocator, <span class="tok-str">'b'</span>);
+    <span class="tok-kw">try</span> list.append(allocator, <span class="tok-str">'c'</span>);
+
+    std.debug.assert(std.mem.eql(<span class="tok-type">u8</span>, list.items, <span class="tok-str">&quot;abc&quot;</span>));
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test array_list.zig</kbd>
+1/1 array_list.test.ArrayList Usage...OK
 All 1 tests passed.
 </samp></pre></figure>
+
+        <p><code>MultiArrayList</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">multi_array_list.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">test</span> <span class="tok-str">&quot;MultiArrayList Usage&quot;</span> {
+    <span class="tok-kw">const</span> allocator = std.testing.allocator;
+
+    <span class="tok-kw">const</span> Foo = <span class="tok-kw">struct</span> {
+        a: <span class="tok-type">u32</span>,
+        b: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,
+        c: <span class="tok-type">u8</span>,
+    };
+
+    <span class="tok-kw">var</span> list = std.MultiArrayList(Foo){};
+    <span class="tok-kw">defer</span> list.deinit(allocator);
+
+    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.a).len, <span class="tok-builtin">@as</span>(<span class="tok-type">usize</span>, <span class="tok-number">0</span>));
+    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.b).len, <span class="tok-builtin">@as</span>(<span class="tok-type">usize</span>, <span class="tok-number">0</span>));
+    <span class="tok-kw">try</span> std.testing.expectEqual(list.items(.c).len, <span class="tok-builtin">@as</span>(<span class="tok-type">usize</span>, <span class="tok-number">0</span>));
+
+    <span class="tok-kw">try</span> list.append(allocator, .{
+        .a = <span class="tok-number">1</span>,
+        .b = <span class="tok-str">&quot;fizz&quot;</span>,
+        .c = <span class="tok-str">'a'</span>,
+    });
+
+    <span class="tok-kw">try</span> list.append(allocator, .{
+        .a = <span class="tok-number">2</span>,
+        .b = <span class="tok-str">&quot;buzz&quot;</span>,
+        .c = <span class="tok-str">'b'</span>,
+    });
+
+    <span class="tok-kw">try</span> std.testing.expectEqualSlices(<span class="tok-type">u32</span>, &amp;[_]<span class="tok-type">u32</span>{ <span class="tok-number">1</span>, <span class="tok-number">2</span> }, list.items(.a));
+    <span class="tok-kw">try</span> std.testing.expectEqualStrings(<span class="tok-str">&quot;fizz&quot;</span>, list.items(.b)[<span class="tok-number">0</span>]);
+    <span class="tok-kw">try</span> std.testing.expectEqualStrings(<span class="tok-str">&quot;buzz&quot;</span>, list.items(.b)[<span class="tok-number">1</span>]);
+    <span class="tok-kw">try</span> std.testing.expectEqualSlices(<span class="tok-type">u8</span>, &amp;[_]<span class="tok-type">u8</span>{ <span class="tok-str">'a'</span>, <span class="tok-str">'b'</span> }, list.items(.c));
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test multi_array_list.zig</kbd>
+1/1 multi_array_list.test.MultiArrayList Usage...OK
+All 1 tests passed.
+</samp></pre></figure>
+
         
 
-        <h2 id="Hello-World2"><a href="#toc-Hello-World2">Hello World2</a> <a class="hdr" href="#Hello-World2">§</a></h2>
 
-        <p>説明-2.</p>
-        <figure><figcaption class="zig-cap"><cite class="file">hello.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+        <h2 id="HashMap"><a href="#toc-HashMap">HashMap</a> <a class="hdr" href="#HashMap">§</a></h2>
 
-<span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">add</span>(a: <span class="tok-type">i32</span>, b: <span class="tok-type">i32</span>) <span class="tok-type">i32</span> {
-    <span class="tok-kw">return</span> a + b;
-}
 
-<span class="tok-kw">test</span> <span class="tok-str">&quot;basic add functionality&quot;</span> {
-    <span class="tok-kw">try</span> std.testing.expect(add(<span class="tok-number">3</span>, <span class="tok-number">7</span>) == <span class="tok-number">10</span>);
-}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test hello.zig</kbd>
-1/1 hello.test.basic add functionality...OK
+        <p><code>AutoHashMap</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">auto_hash_map.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">test</span> <span class="tok-str">&quot;AutoHashMap Usage&quot;</span> {
+    <span class="tok-kw">var</span> map = std.AutoHashMap(<span class="tok-type">u32</span>, <span class="tok-type">u32</span>).init(std.testing.allocator);
+    <span class="tok-kw">defer</span> map.deinit();
+
+    <span class="tok-kw">try</span> map.put(<span class="tok-number">1</span>, <span class="tok-number">10</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-number">2</span>, <span class="tok-number">20</span>);
+
+    <span class="tok-kw">var</span> it = map.iterator();
+    <span class="tok-kw">while</span> (it.next()) |kv| {
+        <span class="tok-kw">try</span> std.testing.expectEqual(kv.value_ptr.*, kv.key_ptr.* * <span class="tok-number">10</span>);
+    }
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test auto_hash_map.zig</kbd>
+1/1 auto_hash_map.test.AutoHashMap Usage...OK
 All 1 tests passed.
 </samp></pre></figure>
+
+        <p><code>StringHashMap</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">string_hash_map.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">test</span> <span class="tok-str">&quot;StringHashMap Usage&quot;</span> {
+    <span class="tok-kw">var</span> map = std.StringHashMap(<span class="tok-type">u32</span>).init(std.testing.allocator);
+    <span class="tok-kw">defer</span> map.deinit();
+
+    <span class="tok-kw">try</span> map.put(<span class="tok-str">&quot;one&quot;</span>, <span class="tok-number">1</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-str">&quot;two&quot;</span>, <span class="tok-number">2</span>);
+
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">1</span>, map.get(<span class="tok-str">&quot;one&quot;</span>).?);
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">2</span>, map.get(<span class="tok-str">&quot;two&quot;</span>).?);
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test string_hash_map.zig</kbd>
+1/1 string_hash_map.test.StringHashMap Usage...OK
+All 1 tests passed.
+</samp></pre></figure>
+
+        <p><code>AutoArrayHashMap</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">auto_array_hash_map.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">test</span> <span class="tok-str">&quot;AutoArrayHashMap Usage&quot;</span> {
+    <span class="tok-kw">var</span> map = std.AutoArrayHashMap(<span class="tok-type">u32</span>, <span class="tok-type">u32</span>).init(std.testing.allocator);
+    <span class="tok-kw">defer</span> map.deinit();
+
+    <span class="tok-kw">try</span> map.put(<span class="tok-number">4</span>, <span class="tok-number">4</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-number">1</span>, <span class="tok-number">1</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-number">3</span>, <span class="tok-number">3</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-number">2</span>, <span class="tok-number">2</span>);
+
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">0</span>, map.getIndex(<span class="tok-number">4</span>).?);
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">1</span>, map.getIndex(<span class="tok-number">1</span>).?);
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">2</span>, map.getIndex(<span class="tok-number">3</span>).?);
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">3</span>, map.getIndex(<span class="tok-number">2</span>).?);
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test auto_array_hash_map.zig</kbd>
+1/1 auto_array_hash_map.test.AutoArrayHashMap Usage...OK
+All 1 tests passed.
+</samp></pre></figure>
+
+        <p><code>StringArrayHashMap</code>の使い方。</p>
+        <figure><figcaption class="zig-cap"><cite class="file">string_array_hash_map.zig</cite></figcaption><pre><code><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);
+
+<span class="tok-kw">test</span> <span class="tok-str">&quot;StringArrayHashMap Usage&quot;</span> {
+    <span class="tok-kw">var</span> map = std.StringArrayHashMap(<span class="tok-type">u32</span>).init(std.testing.allocator);
+    <span class="tok-kw">defer</span> map.deinit();
+
+    <span class="tok-kw">try</span> map.put(<span class="tok-str">&quot;four&quot;</span>, <span class="tok-number">4</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-str">&quot;one&quot;</span>, <span class="tok-number">1</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-str">&quot;two&quot;</span>, <span class="tok-number">3</span>);
+    <span class="tok-kw">try</span> map.put(<span class="tok-str">&quot;three&quot;</span>, <span class="tok-number">2</span>);
+
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">0</span>, map.getIndex(<span class="tok-str">&quot;four&quot;</span>).?);
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">1</span>, map.getIndex(<span class="tok-str">&quot;one&quot;</span>).?);
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">2</span>, map.getIndex(<span class="tok-str">&quot;two&quot;</span>).?);
+    <span class="tok-kw">try</span> std.testing.expectEqual(<span class="tok-number">3</span>, map.getIndex(<span class="tok-str">&quot;three&quot;</span>).?);
+}</code></pre></figure><figure><figcaption class="shell-cap">Shell</figcaption><pre><samp>$ <kbd>zig test string_array_hash_map.zig</kbd>
+1/1 string_array_hash_map.test.StringArrayHashMap Usage...OK
+All 1 tests passed.
+</samp></pre></figure>
+
         
       </div>
     </div>
