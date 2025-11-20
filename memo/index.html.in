@@ -297,13 +297,16 @@
   </head>
   <body>
     <header>
-      <h1>Zig - Memo (0.15.2)</h1>
+      <h1>Zig - Memo</h1>
     </header>
     <div id="main-wrapper">
       <div id="navigation">
         <nav aria-labelledby="zig-version">
-          <h2 id="zig-version">Zig Version</h2>
-          <a href="https://ziglang.org/documentation/0.15.2/">0.15.2</a>
+          <h2 id="zig-version">Zig Version (0.15.2)</h2>
+          <ul>
+            <li><a href="https://ziglang.org/documentation/0.15.2/">Documentation (本家)</a></li>
+            <li><a href="https://ziglang.org/documentation/0.15.2/std/">Standard Library (本家)</a></li>
+          </ul>
         </nav>
         <nav aria-labelledby="table-of-contents">
           <h2 id="table-of-contents">Table of Contents</h2>
@@ -353,6 +356,14 @@
 
         <p>{#syntax#}StringArrayHashMap{#endsyntax#}の使い方。</p>
         {#code|string_array_hash_map.zig#}
+
+        {#header_close#}
+
+
+        {#header_open|Json#}
+
+        <p>{#syntax#}json{#endsyntax#}の使い方。</p>
+        {#code|json.zig#}
 
         {#header_close#}
       </div>
